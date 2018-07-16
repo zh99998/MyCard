@@ -1,0 +1,222 @@
+---
+- hosts: mycard
+  remote_user: root
+  tasks:
+  
+    # ssh 密钥
+    - name: SSH 授权
+      authorized_key:
+        user: root
+        key: "{{ lookup('file', 'authorized_keys') }}"
+    - name: SSH 私钥
+      copy:
+        src: id_ecdsa
+        dest: /root/.ssh/id_ecdsa
+        mode: 0600
+
+    # 主机名
+    - name: 主机名
+      hostname:
+        name: "{{ inventory_hostname_short }}"
+      when: ansible_virtualization_type != 'docker'
+    - name: 主机 hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: "^{{ ansible_default_ipv4.address }}"
+        line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+      when: ansible_virtualization_type != 'docker'
+
+    # 系统源与软件包
+    - name: 系统源 (Debian)
+      copy:
+        content: |
+          deb http://deb.debian.org/debian stretch main
+          deb http://deb.debian.org/debian stretch-updates main
+          deb http://security.debian.org stretch/updates main
+        dest: /etc/apt/sources.list
+      when: ansible_distribution == 'Debian'
+    - name: 系统源 (Ubuntu)    
+      copy:
+        content: |
+          deb http://cn.archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }} main restricted universe multiverse
+          deb http://cn.archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-security main restricted universe multiverse
+          deb http://cn.archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-updates main restricted universe multiverse
+        dest: /etc/apt/sources.list
+      when: ansible_distribution == 'Ubuntu'
+    - name: 系统源 更新缓存
+      apt:
+        name: apt-transport-https
+        update_cache: yes
+    - name: 系统源 更新
+      apt:
+        upgrade: dist
+    - name: 系统源 重启
+      shell: reboot
+      async: 0
+      poll: 0
+      register: reboot
+      args:
+        removes: /var/run/reboot-required
+    - name: 系统源 重启等待
+      local_action: wait_for host={{ ansible_ssh_host }} state=started
+      when: reboot.changed
+    - name: 重新读取主机信息
+      setup:
+
+    - name: TCP 优化 队列策略
+      sysctl:
+        name: net.core.default_qdisc
+        value: fq
+        sysctl_set: yes
+    - name: TCP 优化 拥塞策略
+      sysctl:
+        name: net.ipv4.tcp_congestion_control
+        value: bbr
+        sysctl_set: yes
+
+    # Docker
+    - name: Docker 源公钥
+      apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+    - name: Docker 源
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable
+        filename: docker
+    - name: fish 源公钥 (Debian)
+      apt_key:
+        url: http://download.opensuse.org/repositories/shells:fish:release:2/Debian_{{ ansible_distribution_major_version }}.0/Release.key
+        id: D880C8E4
+      when: ansible_distribution == 'Debian'
+    - name: fish 源 (Debian)
+      apt_repository:
+        repo: deb http://download.opensuse.org/repositories/shells:/fish:/release:/2/Debian_{{ ansible_distribution_major_version }}.0/ /
+        filename: fish
+      when: ansible_distribution == 'Debian'
+    - name: fish 源 (Ubuntu)
+      apt_repository:
+        repo: ppa:fish-shell/release-2
+      when: ansible_distribution == 'Ubuntu'
+    - name: 安装软件包
+      apt:
+        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,fish
+        state: latest
+        autoremove: yes
+
+    # locale，装这个是因为 mosh 会尝试按客户机语言去请求，如果服务器不支持对应语言可能会失败
+    - name: 终端环境 字符编码
+      locale_gen:
+        name: zh_CN.UTF-8
+
+    # fish 和 byobu
+    - name: 终端环境 fish
+      user:
+        name: root
+        shell: /usr/bin/fish
+    - name: 终端环境 fish omf
+      shell: curl -L http://get.oh-my.fish | fish
+      environment:
+        NONINTERACTIVE: true
+        ASSUME_YES: true
+      args:
+        creates: /root/.local/share/omf
+    - name: 终端环境 fish robbyrussell
+      shell: omf install robbyrussell
+      args:
+        executable: /usr/bin/fish
+        creates: /root/.local/share/omf/themes/robbyrussell
+    - name: 终端环境 byobu status
+      lineinfile:
+        name: /usr/share/byobu/status/status
+        line: 'tmux_right="#network #disk_io #custom #entropy raid reboot_required updates_available #apport #services #mail #users uptime #ec2_cost #rcs_cost #fan_speed #cpu_temp #battery #wifi_quality #processes load_average cpu_count cpu_freq memory #swap disk #whoami hostname #ip_address #time_utc #date #time"'
+        regexp: ^tmux_right=
+    - name: 终端环境 byobu enable
+      shell: byobu-enable
+      args:
+        creates: /root/.hushlogin
+    - name: 终端环境 byobu ctrl-a
+      command: byobu-ctrl-a emacs
+      args:
+        creates: /root/.byobu/keybindings.tmux
+    - name: 终端环境 fish 自动填充
+      file:
+        name: /root/.config/fish/completions
+        state: directory
+    - name: 终端环境 fish 自动填充 docker
+      copy:
+        src: /usr/share/fish/vendor_completions.d/docker.fish
+        dest: /root/.config/fish/completions/docker.fish
+        remote_src: yes
+
+    # git 相关配置
+    - name: git user.email
+      git_config:
+        name: user.email
+        scope: global
+        value: zh99998@gmail.com
+    - name: git user.name
+      git_config:
+        name: user.name
+        scope: global
+        value: zh99998
+    - name: git push.default
+      git_config:
+        name: push.default
+        scope: global
+        value: simple
+    - name: git ssh
+      known_hosts:
+        name: github.com
+        key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+
+    # docker-compose，删除这两个路径是因为阿里云初始配置中做了多余的事情导致python加载路径不对了
+    - name: docker-compose 清理 pip
+      file:
+        path: /root/.pip
+        state: absent
+    - name: docker-compose 清理 easy install
+      file:
+        path: /usr/local/lib/python2.7/dist-packages/easy-install.pth
+        state: absent
+    - name: docker-compose pip
+      pip:
+        name: pip
+        state: latest
+    - name: docker-compose    
+      pip:
+        name: docker-compose
+        state: latest
+
+    # docker 服务配置
+    # - ini_file:
+    #     dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+    #     section: Service
+    #     option: Environment
+    #     value: '"HTTP_PROXY={{ ansible_env.HTTP_PROXY }}"'
+    #     no_extra_spaces: yes
+    #   when: "'HTTP_PROXY' in ansible_env"
+    - name: docker 配置 创建目录
+      file:
+        name: /etc/docker
+        state: directory
+    - name: docker 配置
+      copy:
+        content: |
+          {
+            "live-restore": true
+          }
+        dest: /etc/docker/daemon.json
+    - name: docker 启动
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+      when: ansible_virtualization_type != 'docker'
+
+    # 挂载数据盘
+    # - name: 挂载 NAS
+    #   mount:
+    #     name: /data/nas
+    #     src: 0f82c484e6-iee57.cn-hangzhou.nas.aliyuncs.com:/
+    #     fstype: nfs
+    #     state: mounted
+    #   when: ansible_virtualization_type != 'docker'
