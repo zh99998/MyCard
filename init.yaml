@@ -10,8 +10,8 @@
         key: "{{ lookup('file', 'authorized_keys') }}"
     - name: SSH 私钥
       copy:
-        src: id_ecdsa
-        dest: /root/.ssh/id_ecdsa
+        src: ~/.ssh/id_ed25519
+        dest: /root/.ssh/id_ed25519
         mode: 0600
 
     # 主机名
@@ -103,6 +103,9 @@
         autoremove: yes
 
     # locale，装这个是因为 mosh 会尝试按客户机语言去请求，如果服务器不支持对应语言可能会失败
+    - name: 终端环境 字符编码
+      locale_gen:
+        name: en_US.UTF-8
     - name: 终端环境 字符编码
       locale_gen:
         name: zh_CN.UTF-8
