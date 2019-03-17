@@ -14,17 +14,17 @@
         dest: /root/.ssh/id_ed25519
         mode: 0600
 
-    # 主机名
-    # - name: 主机名
-    #   hostname:
-    #     name: "{{ inventory_hostname_short }}"
-    #   when: ansible_virtualization_type != 'docker'
-    # - name: 主机 hosts
-    #   lineinfile:
-    #     dest: /etc/hosts
-    #     regexp: "^{{ ansible_default_ipv4.address }}"
-    #     line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
-    #   when: ansible_virtualization_type != 'docker'
+    主机名
+    - name: 主机名
+      hostname:
+        name: "{{ inventory_hostname_short }}"
+      when: ansible_virtualization_type != 'docker'
+    - name: 主机 hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: "^{{ ansible_default_ipv4.address }}"
+        line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+      when: ansible_virtualization_type != 'docker'
 
     # 系统源与软件包
     - name: 系统源 (Debian)
@@ -38,9 +38,9 @@
     - name: 系统源 (Ubuntu)    
       copy:
         content: |
-          deb http://cn.archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }} main restricted universe multiverse
-          deb http://cn.archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-security main restricted universe multiverse
-          deb http://cn.archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-updates main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }} main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-security main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-updates main restricted universe multiverse
         dest: /etc/apt/sources.list
       when: ansible_distribution == 'Ubuntu'
     - name: 系统源 更新缓存
@@ -73,6 +73,12 @@
         name: net.ipv4.tcp_congestion_control
         value: bbr
         sysctl_set: yes
+    - name: limit
+      pam_limits:
+        domain: 'root'
+        limit_type: '-'
+        limit_item: nofile
+        value: 1048576
 
     - name: limit
       pam_limits:
@@ -105,7 +111,7 @@
       when: ansible_distribution == 'Ubuntu'
     - name: 安装软件包
       apt:
-        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,fish
+        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,fish,open-vm-tools,dnsutils
         state: latest
         autoremove: yes
 
@@ -156,6 +162,12 @@
         src: /usr/share/fish/vendor_completions.d/docker.fish
         dest: /root/.config/fish/completions/docker.fish
         remote_src: yes
+    # vim
+    - name: vim-editorconfig
+      git:
+        repo: https://github.com/editorconfig/editorconfig-vim.git
+        dest: /root/.vim
+        depth: 1
 
     # git 相关配置
     - name: git user.email
@@ -219,7 +231,8 @@
       copy:
         content: |
           {
-            "live-restore": true
+            "live-restore": true,
+            "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"]
           }
         dest: /etc/docker/daemon.json
     - name: docker 启动
@@ -230,10 +243,10 @@
       when: ansible_virtualization_type != 'docker'
 
     # 挂载数据盘
-    # - name: 挂载 NAS
-    #   mount:
-    #     name: /data/nas
-    #     src: 0f82c484e6-iee57.cn-hangzhou.nas.aliyuncs.com:/
-    #     fstype: nfs
-    #     state: mounted
-    #   when: ansible_virtualization_type != 'docker'
+    - name: 挂载 NAS
+      mount:
+        name: /data/nas
+        src: nas.mycard.moe:/volume2/mycard
+        fstype: nfs
+        state: mounted
+      when: ansible_virtualization_type != 'docker'
