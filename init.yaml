@@ -15,16 +15,16 @@
         mode: 0600
 
     # 主机名
-    - name: 主机名
-      hostname:
-        name: "{{ inventory_hostname_short }}"
-      when: ansible_virtualization_type != 'docker'
-    - name: 主机 hosts
-      lineinfile:
-        dest: /etc/hosts
-        regexp: "^{{ ansible_default_ipv4.address }}"
-        line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
-      when: ansible_virtualization_type != 'docker'
+    # - name: 主机名
+    #   hostname:
+    #     name: "{{ inventory_hostname_short }}"
+    #   when: ansible_virtualization_type != 'docker'
+    # - name: 主机 hosts
+    #   lineinfile:
+    #     dest: /etc/hosts
+    #     regexp: "^{{ ansible_default_ipv4.address }}"
+    #     line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+    #   when: ansible_virtualization_type != 'docker'
 
     # 系统源与软件包
     - name: 系统源 (Debian)
@@ -32,7 +32,7 @@
         content: |
           deb http://deb.debian.org/debian stretch main
           deb http://deb.debian.org/debian stretch-updates main
-          deb http://security.debian.org stretch/updates main
+          deb http://security.debian.org/debian-security stretch/updates main
         dest: /etc/apt/sources.list
       when: ansible_distribution == 'Debian'
     - name: 系统源 (Ubuntu)    
@@ -62,7 +62,7 @@
       when: reboot.changed
     - name: 重新读取主机信息
       setup:
-
+      when: reboot.changed
     - name: TCP 优化 队列策略
       sysctl:
         name: net.core.default_qdisc
@@ -73,6 +73,13 @@
         name: net.ipv4.tcp_congestion_control
         value: bbr
         sysctl_set: yes
+
+    - name: limit
+      pam_limits:
+        domain: 'root'
+        limit_type: '-'
+        limit_item: nofile
+        value: 1048576
 
     # Docker
     - name: Docker 源公钥
@@ -170,6 +177,13 @@
       known_hosts:
         name: github.com
         key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+
+    # vim
+    - name: vim-editorconfig
+      git:
+        repo: https://github.com/editorconfig/editorconfig-vim.git
+        dest: /root/.vim
+        depth: 1
 
     # docker-compose，删除这两个路径是因为阿里云初始配置中做了多余的事情导致python加载路径不对了
     - name: docker-compose 清理 pip
