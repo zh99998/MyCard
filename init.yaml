@@ -14,19 +14,22 @@
         dest: /root/.ssh/id_ed25519
         mode: 0600
 
-    主机名
+    # 主机名
     - name: 主机名
       hostname:
         name: "{{ inventory_hostname_short }}"
-      when: ansible_virtualization_type != 'docker'
     - name: 主机 hosts
       lineinfile:
         dest: /etc/hosts
         regexp: "^{{ ansible_default_ipv4.address }}"
         line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
-      when: ansible_virtualization_type != 'docker'
 
     # 系统源与软件包
+    - name: 系统源 clean
+      apt:
+        name: qemu-guest-agent
+        autoremove: yes
+        purge: yes
     - name: 系统源 (Debian)
       copy:
         content: |
@@ -80,13 +83,6 @@
         limit_item: nofile
         value: 1048576
 
-    - name: limit
-      pam_limits:
-        domain: 'root'
-        limit_type: '-'
-        limit_item: nofile
-        value: 1048576
-
     # Docker
     - name: Docker 源公钥
       apt_key:
@@ -111,7 +107,7 @@
       when: ansible_distribution == 'Ubuntu'
     - name: 安装软件包
       apt:
-        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,fish,open-vm-tools,dnsutils
+        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,fish,dnsutils
         state: latest
         autoremove: yes
 
@@ -216,13 +212,6 @@
         state: latest
 
     # docker 服务配置
-    # - ini_file:
-    #     dest: /etc/systemd/system/docker.service.d/http-proxy.conf
-    #     section: Service
-    #     option: Environment
-    #     value: '"HTTP_PROXY={{ ansible_env.HTTP_PROXY }}"'
-    #     no_extra_spaces: yes
-    #   when: "'HTTP_PROXY' in ansible_env"
     - name: docker 配置 创建目录
       file:
         name: /etc/docker
@@ -231,8 +220,9 @@
       copy:
         content: |
           {
-            "live-restore": true,
-            "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"]
+            "iptables": false,
+            "live-restore": true
+            # "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"]
           }
         dest: /etc/docker/daemon.json
     - name: docker 启动
@@ -243,10 +233,10 @@
       when: ansible_virtualization_type != 'docker'
 
     # 挂载数据盘
-    - name: 挂载 NAS
-      mount:
-        name: /data/nas
-        src: nas.mycard.moe:/volume2/mycard
-        fstype: nfs
-        state: mounted
-      when: ansible_virtualization_type != 'docker'
+    # - name: 挂载 NAS
+    #   mount:
+    #     name: /data/nas
+    #     src: nas.mycard.moe:/volume2/mycard
+    #     fstype: nfs
+    #     state: mounted
+    #   when: ansible_virtualization_type != 'docker'
