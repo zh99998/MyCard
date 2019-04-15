@@ -15,14 +15,14 @@
         mode: 0600
 
     # 主机名
-    - name: 主机名
-      hostname:
-        name: "{{ inventory_hostname_short }}"
-    - name: 主机 hosts
-      lineinfile:
-        dest: /etc/hosts
-        regexp: "^{{ ansible_default_ipv4.address }}"
-        line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+    # - name: 主机名
+    #   hostname:
+    #     name: "{{ inventory_hostname_short }}"
+    # - name: 主机 hosts
+    #   lineinfile:
+    #     dest: /etc/hosts
+    #     regexp: "^{{ ansible_default_ipv4.address }}"
+    #     line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
 
     # 系统源与软件包
     - name: 系统源 clean
@@ -186,13 +186,6 @@
         name: github.com
         key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
 
-    # vim
-    - name: vim-editorconfig
-      git:
-        repo: https://github.com/editorconfig/editorconfig-vim.git
-        dest: /root/.vim
-        depth: 1
-
     # docker-compose，删除这两个路径是因为阿里云初始配置中做了多余的事情导致python加载路径不对了
     - name: docker-compose 清理 pip
       file:
@@ -220,9 +213,9 @@
       copy:
         content: |
           {
-            "iptables": false,
+            # "iptables": false,
+            # "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"],
             "live-restore": true
-            # "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"]
           }
         dest: /etc/docker/daemon.json
     - name: docker 启动
