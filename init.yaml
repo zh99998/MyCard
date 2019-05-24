@@ -10,8 +10,8 @@
         key: "{{ lookup('file', 'authorized_keys') }}"
     - name: SSH 私钥
       copy:
-        src: ~/.ssh/id_ed25519
-        dest: /root/.ssh/id_ed25519
+        src: ~/.ssh/id_rsa
+        dest: /root/.ssh/id_rsa
         mode: 0600
 
     # 主机名
@@ -33,9 +33,9 @@
     - name: 系统源 (Debian)
       copy:
         content: |
-          deb http://deb.debian.org/debian stretch main
-          deb http://deb.debian.org/debian stretch-updates main
-          deb http://security.debian.org/debian-security stretch/updates main
+          deb http://deb.debian.org/debian buster main
+          deb http://deb.debian.org/debian buster-updates main
+          deb http://security.debian.org/debian-security buster/updates main
         dest: /etc/apt/sources.list
       when: ansible_distribution == 'Debian'
     - name: 系统源 (Ubuntu)    
@@ -91,23 +91,9 @@
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable
         filename: docker
-    - name: fish 源公钥 (Debian)
-      apt_key:
-        url: http://download.opensuse.org/repositories/shells:fish:release:2/Debian_{{ ansible_distribution_major_version }}.0/Release.key
-        id: D880C8E4
-      when: ansible_distribution == 'Debian'
-    - name: fish 源 (Debian)
-      apt_repository:
-        repo: deb http://download.opensuse.org/repositories/shells:/fish:/release:/2/Debian_{{ ansible_distribution_major_version }}.0/ /
-        filename: fish
-      when: ansible_distribution == 'Debian'
-    - name: fish 源 (Ubuntu)
-      apt_repository:
-        repo: ppa:fish-shell/release-2
-      when: ansible_distribution == 'Ubuntu'
     - name: 安装软件包
       apt:
-        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,fish,dnsutils
+        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,dnsutils,fish
         state: latest
         autoremove: yes
 
@@ -136,6 +122,63 @@
       args:
         executable: /usr/bin/fish
         creates: /root/.local/share/omf/themes/robbyrussell
+    - name: 终端环境 fish 自动填充
+      file:
+        name: /root/.config/fish/completions
+        state: directory
+    - name: 终端环境 fish 自动填充 docker
+      copy:
+        src: /usr/share/fish/vendor_completions.d/docker.fish
+        dest: /root/.config/fish/completions/docker.fish
+        remote_src: yes
+    # - name: 终端环境 zsh
+    #   user:
+    #     name: root
+    #     shell: /usr/bin/zsh
+    # - name: 终端环境 zshrc
+    #   copy:
+    #     content: |
+    #       # Set up the prompt
+
+    #       autoload -Uz promptinit
+    #       promptinit
+    #       prompt redhat
+
+    #       setopt histignorealldups sharehistory
+
+    #       # Use emacs keybindings even if our EDITOR is set to vi
+    #       bindkey -e
+
+    #       # Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
+    #       HISTSIZE=1000
+    #       SAVEHIST=1000
+    #       HISTFILE=~/.zsh_history
+
+    #       # Use modern completion system
+    #       autoload -Uz compinit
+    #       compinit
+
+    #       zstyle ':completion:*' auto-description 'specify: %d'
+    #       zstyle ':completion:*' completer _expand _complete _correct _approximate
+    #       zstyle ':completion:*' format 'Completing %d'
+    #       zstyle ':completion:*' group-name ''
+    #       zstyle ':completion:*' menu select=2
+    #       eval "$(dircolors -b)"
+    #       zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+    #       zstyle ':completion:*' list-colors ''
+    #       zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert%s
+    #       zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Z}' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=* l:|=*'
+    #       zstyle ':completion:*' menu select=long
+    #       zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
+    #       zstyle ':completion:*' use-compctl false
+    #       zstyle ':completion:*' verbose true
+
+    #       zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+    #       zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+
+    #       source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    #       source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+    #     dest: /root/.zshrc
     - name: 终端环境 byobu status
       lineinfile:
         name: /usr/share/byobu/status/status
@@ -149,15 +192,6 @@
       command: byobu-ctrl-a emacs
       args:
         creates: /root/.byobu/keybindings.tmux
-    - name: 终端环境 fish 自动填充
-      file:
-        name: /root/.config/fish/completions
-        state: directory
-    - name: 终端环境 fish 自动填充 docker
-      copy:
-        src: /usr/share/fish/vendor_completions.d/docker.fish
-        dest: /root/.config/fish/completions/docker.fish
-        remote_src: yes
     # vim
     - name: vim-editorconfig
       git:
@@ -185,13 +219,6 @@
       known_hosts:
         name: github.com
         key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
-
-    # vim
-    - name: vim-editorconfig
-      git:
-        repo: https://github.com/editorconfig/editorconfig-vim.git
-        dest: /root/.vim
-        depth: 1
 
     # docker-compose，删除这两个路径是因为阿里云初始配置中做了多余的事情导致python加载路径不对了
     - name: docker-compose 清理 pip
@@ -221,8 +248,8 @@
         content: |
           {
             "iptables": false,
+            # "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"],
             "live-restore": true
-            # "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"]
           }
         dest: /etc/docker/daemon.json
     - name: docker 启动
