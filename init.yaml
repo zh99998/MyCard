@@ -15,14 +15,14 @@
         mode: 0600
 
     # 主机名
-    # - name: 主机名
-    #   hostname:
-    #     name: "{{ inventory_hostname_short }}"
-    # - name: 主机 hosts
-    #   lineinfile:
-    #     dest: /etc/hosts
-    #     regexp: "^{{ ansible_default_ipv4.address }}"
-    #     line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+    - name: 主机名
+      hostname:
+        name: "{{ inventory_hostname_short }}"
+    - name: 主机 hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: "^{{ ansible_default_ipv4.address }}"
+        line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
 
     # 系统源与软件包
     - name: 系统源 clean
@@ -93,7 +93,7 @@
         filename: docker
     - name: 安装软件包
       apt:
-        name: docker-ce,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,dnsutils,fish
+        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,dnsutils,fish
         state: latest
         autoremove: yes
 
@@ -198,7 +198,18 @@
         repo: https://github.com/editorconfig/editorconfig-vim.git
         dest: /root/.vim
         depth: 1
-
+    - name: vim-xterm-bracketed-paste
+      copy:
+        content: |
+          " bracketed paste mode support for tmux
+          if &term =~ '^screen\|^tmux' && exists('&t_BE')
+            let &t_BE = "\033[?2004h"
+            let &t_BD = "\033[?2004l"
+            " t_PS and t_PE are key code options and they are special
+            exec "set t_PS=" . "\033[200~"
+            exec "set t_PE=" . "\033[201~"
+          endif
+        dest: /root/.vim/plugin/xterm-bracketed-paste.vim
     # git 相关配置
     - name: git user.email
       git_config:
@@ -247,8 +258,7 @@
       copy:
         content: |
           {
-            "iptables": false,
-            # "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"],
+            "registry-mirrors": ["https://5rtshmjz.mirror.aliyuncs.com"],
             "live-restore": true
           }
         dest: /etc/docker/daemon.json
