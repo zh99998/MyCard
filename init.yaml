@@ -93,7 +93,7 @@
         filename: docker
     - name: 安装软件包
       apt:
-        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,tcpdump,locales,nfs-common,dnsutils,fish
+        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,subversion,tcpdump,locales,nfs-common,dnsutils,fish
         state: latest
         autoremove: yes
 
@@ -196,8 +196,12 @@
     - name: vim-editorconfig
       git:
         repo: https://github.com/editorconfig/editorconfig-vim.git
-        dest: /root/.vim
+        dest: /root/.vim/pack/editorconfig/start/editorconfig
         depth: 1
+    - name: vim-xterm-bracketed-paste-directory
+      file: 
+        path: /root/.vim/pack/xterm-bracketed-paste/start/xterm-bracketed-paste/plugin
+        state: directory
     - name: vim-xterm-bracketed-paste
       copy:
         content: |
@@ -209,7 +213,19 @@
             exec "set t_PS=" . "\033[200~"
             exec "set t_PE=" . "\033[201~"
           endif
-        dest: /root/.vim/plugin/xterm-bracketed-paste.vim
+        dest: /root/.vim/pack/xterm-bracketed-paste/start/xterm-bracketed-paste/plugin/xterm-bracketed-paste.vim
+    - name: vim-modeline-directory
+      file: 
+        path: /root/.vim/pack/modeline/start/modeline/plugin
+        state: directory
+    - name: vim-modeline
+      copy:
+        content: set modeline
+        dest: /root/.vim/pack/modeline/start/modeline/plugin/modeline.vim
+    - name: vim-nginx
+      subversion:
+        repo: https://github.com/nginx/nginx/trunk/contrib/vim
+        dest: /root/.vim/pack/nginx/start/nginx
     # git 相关配置
     - name: git user.email
       git_config:
