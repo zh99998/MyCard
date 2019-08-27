@@ -49,9 +49,9 @@
     - name: 系统源 (Debian)
       copy:
         content: |
-          deb http://deb.debian.org/debian buster main
-          deb http://deb.debian.org/debian buster-updates main
-          deb http://security.debian.org/debian-security buster/updates main
+          deb http://ftp.cn.debian.org/debian buster main
+          deb http://ftp.cn.debian.org/debian buster-updates main
+          deb http://ftp.cn.debian.org/debian-security buster/updates main
         dest: /etc/apt/sources.list
       when: ansible_distribution == 'Debian'
     - name: 系统源 (Ubuntu)    
@@ -62,13 +62,10 @@
           deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release }}-updates main restricted universe multiverse
         dest: /etc/apt/sources.list
       when: ansible_distribution == 'Ubuntu'
-    - name: 系统源 更新缓存
-      apt:
-        name: apt-transport-https
-        update_cache: yes
     - name: 系统源 更新
       apt:
         upgrade: dist
+        update_cache: yes
     - name: 系统源 重启
       shell: reboot
       async: 0
