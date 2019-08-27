@@ -33,8 +33,10 @@
     - name: clean 阿里云
       shell: |
         curl -L http://update.aegis.aliyun.com/download/uninstall.sh | bash
-        pkill aliyun-service
-        rm -rf /usr/local/aegis /etc/init.d/agentwatch /usr/sbin/aliyun-service
+        systemctl stop aliyun.service
+        systemctl disable aliyun.service
+        rm -rf /usr/local/aegis /etc/init.d/agentwatch /etc/systemd/system/aliyun.service /usr/sbin/aliyun-service /usr/sbin/aliyun-service.backup /usr/sbin/aliyun_installer
+        systemctl daemon-reload
       args:
         removes: /usr/local/aegis
     - name: clean 阿里云 2
