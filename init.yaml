@@ -107,7 +107,7 @@
         filename: docker
     - name: 安装软件包
       apt:
-        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,subversion,tcpdump,locales,nfs-common,dnsutils,fish,haveged,mtr
+        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,subversion,tcpdump,locales,nfs-common,dnsutils,fish,haveged,mtr,rsync
         state: latest
         autoremove: yes
 
