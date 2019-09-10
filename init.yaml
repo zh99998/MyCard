@@ -25,11 +25,6 @@
         line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
 
     # 系统源与软件包
-    - name: 系统源 clean
-      apt:
-        name: qemu-guest-agent
-        autoremove: yes
-        purge: yes
     - name: clean 阿里云
       shell: |
         curl -L http://update.aegis.aliyun.com/download/uninstall.sh | bash
@@ -46,12 +41,18 @@
         rm -rf /usr/local/cloudmonitor
       args:
         removes: /usr/local/cloudmonitor
+    - name: clean qemu
+      apt:
+        name: qemu-guest-agent
+        state: absent
+        autoremove: yes
+        purge: yes
     - name: 系统源 (Debian)
       copy:
         content: |
-          deb http://ftp.cn.debian.org/debian buster main
-          deb http://ftp.cn.debian.org/debian buster-updates main
-          deb http://ftp.cn.debian.org/debian-security buster/updates main
+          deb http://deb.debian.org/debian buster main
+          deb http://deb.debian.org/debian buster-updates main
+          deb http://security.debian.org/debian-security buster/updates main
         dest: /etc/apt/sources.list
       when: ansible_distribution == 'Debian'
     - name: 系统源 (Ubuntu)    
@@ -106,7 +107,7 @@
         filename: docker
     - name: 安装软件包
       apt:
-        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,subversion,tcpdump,locales,nfs-common,dnsutils,fish,haveged
+        name: docker-ce,python-backports.ssl-match-hostname,python-pip,mosh,byobu,curl,wget,htop,iftop,iotop,vim,git,subversion,tcpdump,locales,nfs-common,dnsutils,fish,haveged,mtr
         state: latest
         autoremove: yes
 
