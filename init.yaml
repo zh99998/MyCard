@@ -67,6 +67,11 @@
       apt:
         upgrade: dist
         update_cache: yes
+    - name: open-vm-tools
+      apt:
+        name: open-vm-tools
+        state: latest
+      when: ansible_os_family == "Debian" and ansible_virtualization_type == "VMware"
     - name: 系统源 重启
       shell: reboot
       async: 0
@@ -297,12 +302,3 @@
         enabled: yes
         state: started
       when: ansible_virtualization_type != 'docker'
-
-    # 挂载数据盘
-    # - name: 挂载 NAS
-    #   mount:
-    #     name: /data/nas
-    #     src: nas.mycard.moe:/volume2/mycard
-    #     fstype: nfs
-    #     state: mounted
-    #   when: ansible_virtualization_type != 'docker'
